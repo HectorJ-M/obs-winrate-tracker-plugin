@@ -86,7 +86,8 @@ export class Main {
         this.container.append(settings);
     }
     getSourcesText(format) {
-        return `${TEXT_WIN}: ${this.wins} | ${TEXT_LOSS}: ${this.loss} | ${TEXT_WIN_RATE}: ${this.getWinRateValue()}`;
+        const game = this.wins + this.loss + 1;
+        return `Game ${game}: ${TEXT_WIN}: ${this.wins} | ${TEXT_LOSS}: ${this.loss}`;
     }
     getShortLastRecordText() {
         if (this.lastRecord) {
