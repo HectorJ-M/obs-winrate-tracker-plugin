@@ -87,7 +87,7 @@ export class Main {
     }
     getSourcesText(format) {
         const game = this.wins + this.loss + 1;
-        return `Game ${game}| ${TEXT_WIN}: ${this.wins} | ${TEXT_LOSS}: ${this.loss}`;
+        return `Game ${game} | ${TEXT_WIN}: ${this.wins} | ${TEXT_LOSS}: ${this.loss}`;
     }
     getShortLastRecordText() {
         if (this.lastRecord) {
