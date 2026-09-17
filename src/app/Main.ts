@@ -400,18 +400,21 @@ export class Main {
         const minutes:number = date.getMinutes();
         const seconds:number = date.getSeconds();
 
-        if(hours > 0) {
+        const minutesText:string =
+            minutes < 10
+                ? `0${minutes}`
+                : minutes.toString();
 
-            return `${hours}:${minutes
-                .toString()
-                .padStart(2, "0")}:${seconds
-                .toString()
-                .padStart(2, "0")}`;
+        const secondsText:string =
+            seconds < 10
+                ? `0${seconds}`
+                : seconds.toString();
+
+        if(hours > 0) {
+            return `${hours}:${minutesText}:${secondsText}`;
         }
 
-        return `${minutes}:${seconds
-            .toString()
-            .padStart(2, "0")}`;
+        return `${minutes}:${secondsText}`;
     }
 
 

@@ -9,6 +9,10 @@ export class Main {
         this.container = document.getElementById("app");
         this.wins = 0;
         this.loss = 0;
+        // Game time tracking
+        this.gameStartTime = 0;
+        this.previousGameStartTime = "0:00";
+        this.previousGameEndTime = "0:00";
         this.locale = this.getLocale();
         this.config = Config.getInstance();
         this.readValues();
@@ -32,6 +36,9 @@ export class Main {
             switch (event.key) {
                 case "wins":
                 case "loss":
+                case "gameStartTime":
+                case "previousGameStartTime":
+                case "previousGameEndTime":
                     this.readValues();
                     const sourceText = this.getSourcesText();
                     if (pageSource.getText() !== sourceText) {
@@ -72,11 +79,20 @@ export class Main {
         window.addEventListener("storage", (event) => {
             if (event.key === "config") {
                 this.config.readConfig();
-                elBtnSave.style.display = this.config.getUseSaveBtnValue() ? "block" : "none";
+                elBtnSave.style.display =
+                    this.config.getUseSaveBtnValue()
+                        ? "block"
+                        : "none";
                 const showLastSaveInfo = this.config.getShowLastSaveInfoValue();
-                elLastLabel.style.display = showLastSaveInfo ? "block" : "none";
+                elLastLabel.style.display =
+                    showLastSaveInfo
+                        ? "block"
+                        : "none";
                 if (this.elLastRecord) {
-                    this.elLastRecord.style.display = showLastSaveInfo ? "block" : "none";
+                    this.elLastRecord.style.display =
+                        showLastSaveInfo
+                            ? "block"
+                            : "none";
                 }
             }
         });
@@ -85,31 +101,50 @@ export class Main {
         const settings = new PageSettings();
         this.container.append(settings);
     }
+    /**
+     * Text displayed in the OBS Browser Source.
+     *
+     * Example:
+     * Game 2: Win 1 | Lose 0 | Previous Game 1 Time 0:00 - 18:00
+     */
     getSourcesText(format) {
         const game = this.wins + this.loss + 1;
-        return `Game ${game} | ${TEXT_WIN}: ${this.wins} | ${TEXT_LOSS}: ${this.loss}`;
+        return `Game ${game}: Win ${this.wins} | Lose ${this.loss}\nPrevious Game : ${this.previousGameStartTime} - ${this.previousGameEndTime}`;
     }
     getShortLastRecordText() {
         if (this.lastRecord) {
-            return this.lastRecord.replace(TEXT_WIN_RATE, TEXT_WIN_RATE_SHORT).replace(TEXT_WIN, TEXT_WIN_SHORT).replace(TEXT_LOSS, TEXT_LOSS_SHORT);
+            return this.lastRecord
+                .replace(TEXT_WIN_RATE, TEXT_WIN_RATE_SHORT)
+                .replace(TEXT_WIN, TEXT_WIN_SHORT)
+                .replace(TEXT_LOSS, TEXT_LOSS_SHORT);
         }
         return "";
     }
     resetAllRecords() {
+        // Start a completely new Game 1
+        this.gameStartTime = Date.now();
+        this.previousGameStartTime = "0:00";
+        this.previousGameEndTime = "0:00";
+        this.setLSValue("gameStartTime", this.gameStartTime.toString());
+        this.setLSValue("previousGameStartTime", "0:00");
+        this.setLSValue("previousGameEndTime", "0:00");
         this.setRecords(0, 0);
         this.saveRecords();
     }
     setRecords(wins, loss) {
         var _a, _b;
-        if (wins !== undefined)
+        if (wins !== undefined) {
             this.wins = wins;
-        if (loss !== undefined)
+        }
+        if (loss !== undefined) {
             this.loss = loss;
+        }
         this.lastRecord = this.getLastRecordText();
         (_a = this.elInputWins) === null || _a === void 0 ? void 0 : _a.setValue(this.wins);
         (_b = this.elInputLoss) === null || _b === void 0 ? void 0 : _b.setValue(this.loss);
         if (this.elLastRecord) {
-            this.elLastRecord.innerText = this.getShortLastRecordText();
+            this.elLastRecord.innerText =
+                this.getShortLastRecordText();
         }
         this.setWinRateValue();
     }
@@ -117,10 +152,15 @@ export class Main {
         this.setLSValue("wins", this.wins.toString());
         this.setLSValue("loss", this.loss.toString());
         this.setLSValue("lastRecord", this.getLastRecordText());
+        this.setLSValue("gameStartTime", this.gameStartTime.toString());
+        this.setLSValue("previousGameStartTime", this.previousGameStartTime);
+        this.setLSValue("previousGameEndTime", this.previousGameEndTime);
         this.setRecords();
     }
     getWinRateValue() {
-        const result = this.wins ? (this.wins / (this.wins + this.loss) * 100) : 0;
+        const result = this.wins
+            ? (this.wins / (this.wins + this.loss) * 100)
+            : 0;
         return result.toFixed(2) + "%";
     }
     getLastRecordText() {
@@ -131,15 +171,71 @@ export class Main {
         return `${date.toLocaleDateString(this.locale)} (${date.toLocaleTimeString(this.locale)})`;
     }
     getLocale() {
-        return navigator.language.substring(0, 2).toLowerCase();
+        return navigator.language
+            .substring(0, 2)
+            .toLowerCase();
+    }
+    /**
+     * Convert a timestamp into a clock time.
+     *
+     * Examples:
+     * 18:00
+     * 18:32
+     * 1:05:12
+     */
+    formatGameTime(timestamp) {
+        const date = new Date(timestamp);
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const seconds = date.getSeconds();
+        const minutesText = minutes < 10
+            ? `0${minutes}`
+            : minutes.toString();
+        const secondsText = seconds < 10
+            ? `0${seconds}`
+            : seconds.toString();
+        if (hours > 0) {
+            return `${hours}:${minutesText}:${secondsText}`;
+        }
+        return `${minutes}:${secondsText}`;
     }
     readValues() {
         const lsWins = this.getLSValue("wins");
         const lsLoss = this.getLSValue("loss");
         const lsLastRecord = this.getLSValue("lastRecord");
-        this.wins = lsWins ? parseInt(lsWins) : 0;
-        this.loss = lsLoss ? parseInt(lsLoss) : 0;
-        this.lastRecord = lsLastRecord ? lsLastRecord : this.getLastRecordText();
+        const lsGameStartTime = this.getLSValue("gameStartTime");
+        const lsPreviousGameStartTime = this.getLSValue("previousGameStartTime");
+        const lsPreviousGameEndTime = this.getLSValue("previousGameEndTime");
+        this.wins = lsWins
+            ? parseInt(lsWins)
+            : 0;
+        this.loss = lsLoss
+            ? parseInt(lsLoss)
+            : 0;
+        /*
+         * If this is a brand-new tracker,
+         * start Game 1 now.
+         */
+        if (lsGameStartTime) {
+            this.gameStartTime =
+                parseInt(lsGameStartTime);
+        }
+        else {
+            this.gameStartTime = Date.now();
+            this.setLSValue("gameStartTime", this.gameStartTime.toString());
+        }
+        this.previousGameStartTime =
+            lsPreviousGameStartTime
+                ? lsPreviousGameStartTime
+                : "0:00";
+        this.previousGameEndTime =
+            lsPreviousGameEndTime
+                ? lsPreviousGameEndTime
+                : "0:00";
+        this.lastRecord =
+            lsLastRecord
+                ? lsLastRecord
+                : this.getLastRecordText();
     }
     getLSValue(key) {
         return window.localStorage.getItem(key);
@@ -148,9 +244,45 @@ export class Main {
         window.localStorage.setItem(key, value);
     }
     onInputChange(input, field) {
-        if (!input)
+        if (!input) {
             return;
+        }
         const newValue = input.getValue();
+        /*
+         * Make sure there is a starting timestamp.
+         */
+        if (this.gameStartTime === 0) {
+            this.gameStartTime = Date.now();
+        }
+        /*
+         * This is the moment the current game ends.
+         */
+        const currentTime = Date.now();
+        /*
+         * Save the time range for the game
+         * that just ended.
+         *
+         * Example:
+         *
+         * Game 1
+         * 0:00 -> 18:00
+         */
+        this.previousGameStartTime =
+            this.formatGameTime(this.gameStartTime);
+        this.previousGameEndTime =
+            this.formatGameTime(currentTime);
+        /*
+         * The next game starts immediately
+         * after the previous game ends.
+         *
+         * Example:
+         *
+         * Game 2 starts at 18:00
+         */
+        this.gameStartTime = currentTime;
+        /*
+         * Update the Win/Loss counter.
+         */
         if (field === "wins") {
             this.wins = newValue;
         }
@@ -158,13 +290,25 @@ export class Main {
             this.loss = newValue;
         }
         this.setWinRateValue();
+        /*
+         * Save the timing information so
+         * the OBS Browser Source can see it.
+         */
+        this.setLSValue("gameStartTime", this.gameStartTime.toString());
+        this.setLSValue("previousGameStartTime", this.previousGameStartTime);
+        this.setLSValue("previousGameEndTime", this.previousGameEndTime);
+        /*
+         * Automatically save if the setting
+         * is enabled.
+         */
         if (!this.config.getUseSaveBtnValue()) {
             this.saveRecords();
         }
     }
     setWinRateValue() {
         if (this.elValueWinRate) {
-            this.elValueWinRate.innerText = this.getWinRateValue();
+            this.elValueWinRate.innerText =
+                this.getWinRateValue();
         }
     }
     openSettings() {
